@@ -25,9 +25,24 @@ interface LedgerProps {
   currentUser?: AppUser | null;
   usersList?: AppUser[];
   yearsList?: number[];
+  rtTitle?: string;
+  rtAddress?: string;
+  rtEmail?: string;
 }
 
-export default function Ledger({ ledger, setLedger, kas, updateKas, isLoggedIn, currentUser = null, usersList = [], yearsList = [2024, 2025, 2026, 2027, 2028] }: LedgerProps) {
+export default function Ledger({ 
+  ledger, 
+  setLedger, 
+  kas, 
+  updateKas, 
+  isLoggedIn, 
+  currentUser = null, 
+  usersList = [], 
+  yearsList = [2024, 2025, 2026, 2027, 2028],
+  rtTitle = 'PENGURUS RUKUN TETANGGA 008 RUKUN WARGA 004',
+  rtAddress = 'PERUMTAS 3 RT.008 RW.004 DESA POPOH KEC WONOAYU KABUPATEN SIDOARJO 61261',
+  rtEmail = 'tas3.rt.08@gmail.com'
+}: LedgerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'semua' | 'pemasukan' | 'pengeluaran'>('semua');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
@@ -455,11 +470,13 @@ export default function Ledger({ ledger, setLedger, kas, updateKas, isLoggedIn, 
             <div id="printable-report-area" className="bg-white p-2 md:p-4 text-slate-950 font-sans">
               {/* Kop Surat Header */}
               <div className="border-b-4 border-double border-slate-950 pb-4 mb-6 text-center">
-                <h2 className="text-sm md:text-base font-black font-sans tracking-wide text-slate-900 uppercase leading-tight">PENGURUS RUKUN TETANGGA 008 RUKUN WARGA 004</h2>
-                <h3 className="text-xs md:text-sm font-extrabold font-sans text-slate-800 tracking-wide uppercase leading-tight mt-1">PERUMTAS 3 RT.008 RW.004 DESA POPOH KEC WONOAYU KABUPATEN SIDOARJO 61261</h3>
-                <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-1 font-sans">
-                  Email: tas3.rt.08@gmail.com
-                </p>
+                <h2 className="text-sm md:text-base font-black font-sans tracking-wide text-slate-900 uppercase leading-tight">{rtTitle}</h2>
+                <h3 className="text-xs md:text-sm font-extrabold font-sans text-slate-800 tracking-wide uppercase leading-tight mt-1">{rtAddress}</h3>
+                {rtEmail && (
+                  <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-1 font-sans">
+                    Email: {rtEmail}
+                  </p>
+                )}
               </div>
 
               {/* Document Metadata Block */}

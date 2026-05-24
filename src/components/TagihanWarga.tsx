@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WargaBill, Balance, LedgerEntry, RombongBill, AppUser } from '../types';
 import { 
   Search, 
@@ -21,7 +21,9 @@ import {
   Calendar,
   Settings,
   Printer,
-  Copy
+  Copy,
+  RotateCcw,
+  ShieldAlert
 } from 'lucide-react';
 
 interface TagihanWargaProps {
@@ -40,6 +42,17 @@ interface TagihanWargaProps {
   updateBlocksList?: (newBlocks: string[]) => void;
   yearsList?: number[];
   updateYearsList?: (newYears: number[]) => void;
+  rateRT: number;
+  updateRateRT: (newVal: number) => void;
+  rateRombong: number;
+  updateRateRombong: (newVal: number) => void;
+  onTriggerReset?: () => void;
+  rtTitle?: string;
+  updateRtTitle?: (newVal: string) => void;
+  rtAddress?: string;
+  updateRtAddress?: (newVal: string) => void;
+  rtEmail?: string;
+  updateRtEmail?: (newVal: string) => void;
 }
 
 export default function TagihanWarga({ 
@@ -57,7 +70,18 @@ export default function TagihanWarga({
   blocksList = ['A4', 'A3', 'C5', 'C3'],
   updateBlocksList,
   yearsList = [2024, 2025, 2026, 2027],
-  updateYearsList
+  updateYearsList,
+  rateRT,
+  updateRateRT,
+  rateRombong,
+  updateRateRombong,
+  onTriggerReset = () => {},
+  rtTitle = 'PENGURUS RUKUN TETANGGA 008 RUKUN WARGA 004',
+  updateRtTitle = () => {},
+  rtAddress = 'PERUMTAS 3 RT.008 RW.004 DESA POPOH KEC WONOAYU KABUPATEN SIDOARJO 61261',
+  updateRtAddress = () => {},
+  rtEmail = 'tas3.rt.08@gmail.com',
+  updateRtEmail = () => {}
 }: TagihanWargaProps) {
   // Helpers for dynamic greetings/signatures
   const cleanSignatureName = (nama: string) => {
@@ -158,10 +182,14 @@ export default function TagihanWarga({
   } | null>(null);
 
   const [corrStatusLunas, setCorrStatusLunas] = useState<boolean>(true);
-  const [corrNominal, setCorrNominal] = useState<number>(110000);
+  const [corrNominal, setCorrNominal] = useState<number>(rateRT);
   const [corrTahun, setCorrTahun] = useState<number>(2026);
   const [corrTransferTargetWargaId, setCorrTransferTargetWargaId] = useState<string>('');
   const [corrTargetKas, setCorrTargetKas] = useState<keyof Balance>('rtBank');
+
+  useEffect(() => {
+    setCorrNominal(rateRT);
+  }, [rateRT]);
 
   // Rombong Correction Modal states
   const [correctionRombongInfo, setCorrectionRombongInfo] = useState<{
@@ -173,10 +201,14 @@ export default function TagihanWarga({
   } | null>(null);
 
   const [corrRombongStatusLunas, setCorrRombongStatusLunas] = useState<boolean>(true);
-  const [corrRombongNominal, setCorrRombongNominal] = useState<number>(130000);
+  const [corrRombongNominal, setCorrRombongNominal] = useState<number>(rateRombong);
   const [corrRombongTahun, setCorrRombongTahun] = useState<number>(2026);
   const [corrTransferTargetRombongId, setCorrTransferTargetRombongId] = useState<string>('');
   const [corrRombongTargetKas, setCorrRombongTargetKas] = useState<keyof Balance>('rombongBank');
+
+  useEffect(() => {
+    setCorrRombongNominal(rateRombong);
+  }, [rateRombong]);
 
   // WhatsApp Billing popup state
   const [selectedWargaForWhatsApp, setSelectedWargaForWhatsApp] = useState<WargaBill | null>(null);
@@ -241,7 +273,7 @@ export default function TagihanWarga({
       blok: newWarga.blok,
       noRumah: newWarga.noRumah,
       noWa: newWarga.noWa.trim(),
-      iuranRT: months.map(m => ({ bulan: m, lunas: false, nominal: 110000 })),
+      iuranRT: months.map(m => ({ bulan: m, lunas: false, nominal: rateRT })),
     };
 
     updateWargaList([...wargaList, created]);
@@ -311,7 +343,7 @@ export default function TagihanWarga({
       lokasi: newRombong.lokasi || 'Samping Lapangan',
       noLapak: newRombong.noLapak,
       noWa: newRombong.noWa.trim(),
-      iuranRombong: months.map(m => ({ bulan: m, lunas: false, nominal: 130000 })),
+      iuranRombong: months.map(m => ({ bulan: m, lunas: false, nominal: rateRombong })),
     };
 
     updateRombongList([...rombongList, created]);
@@ -1042,7 +1074,7 @@ export default function TagihanWarga({
         const timeStr = slot.tanggalBayar ? ` (Tgl: ${slot.tanggalBayar}${slot.jamBayar ? ` ${slot.jamBayar}` : ''})` : '';
         message += `${idx + 1}. *${m}*: Lunas - Rp ${slot.nominal.toLocaleString('id-ID')}${timeStr} ✓\n`;
       } else {
-        message += `${idx + 1}. *${m}*: Belum Bayar (Rp 110.000) ✗\n`;
+        message += `${idx + 1}. *${m}*: Belum Bayar (Rp ${rateRT.toLocaleString('id-ID')}) ✗\n`;
       }
     });
     
@@ -1074,7 +1106,7 @@ export default function TagihanWarga({
         const timeStr = slot.tanggalBayar ? ` (Tgl: ${slot.tanggalBayar}${slot.jamBayar ? ` ${slot.jamBayar}` : ''})` : '';
         message += `${idx + 1}. *${m}*: Lunas - Rp ${slot.nominal.toLocaleString('id-ID')}${timeStr} ✓\n`;
       } else {
-        message += `${idx + 1}. *${m}*: Belum Bayar (Rp 130.000) ✗\n`;
+        message += `${idx + 1}. *${m}*: Belum Bayar (Rp ${rateRombong.toLocaleString('id-ID')}) ✗\n`;
       }
     });
     
@@ -1114,9 +1146,9 @@ export default function TagihanWarga({
       let totalTunggakan = 0;
 
       if (unpaidRT.length > 0) {
-        const sub = unpaidRT.length * 110000;
+        const sub = unpaidRT.length * rateRT;
         totalTunggakan += sub;
-        message += `• *Iuran RT (${selectedBillingYear})* (Rp 110.000 / bln): ${unpaidRT.join(', ')} (Subtotal: Rp ${sub.toLocaleString('id-ID')})\n`;
+        message += `• *Iuran RT (${selectedBillingYear})* (Rp ${rateRT.toLocaleString('id-ID')} / bln): ${unpaidRT.join(', ')} (Subtotal: Rp ${sub.toLocaleString('id-ID')})\n`;
       }
 
       message += `\n*Total Tunggakan: Rp ${totalTunggakan.toLocaleString('id-ID')}*\n\n`;
@@ -1166,9 +1198,9 @@ export default function TagihanWarga({
       let totalTunggakan = 0;
 
       if (unpaidRombong.length > 0) {
-        const sub = unpaidRombong.length * 130000;
+        const sub = unpaidRombong.length * rateRombong;
         totalTunggakan += sub;
-        message += `• *Iuran Rombong (${selectedBillingYear})* (Rp 130.000 / bln): ${unpaidRombong.join(', ')} (Subtotal: Rp ${sub.toLocaleString('id-ID')})\n`;
+        message += `• *Iuran Rombong (${selectedBillingYear})* (Rp ${rateRombong.toLocaleString('id-ID')} / bln): ${unpaidRombong.join(', ')} (Subtotal: Rp ${sub.toLocaleString('id-ID')})\n`;
       }
 
       message += `\n*Total Tunggakan: Rp ${totalTunggakan.toLocaleString('id-ID')}*\n\n`;
@@ -2382,7 +2414,7 @@ export default function TagihanWarga({
                           (b.bulan.toLowerCase() === m.toLowerCase() || b.bulan.toLowerCase() === shortM.toLowerCase())
                         );
                         if (!slot) {
-                          totalTunggakan += 110000;
+                          totalTunggakan += rateRT;
                         }
                       });
                       return totalTunggakan;
@@ -2407,7 +2439,7 @@ export default function TagihanWarga({
                     );
 
                     const isLunas = matchedSlot ? matchedSlot.lunas : false;
-                    const nominalValue = matchedSlot ? matchedSlot.nominal : 110000;
+                    const nominalValue = matchedSlot ? matchedSlot.nominal : rateRT;
                     const displayBulan = matchedSlot ? matchedSlot.bulan : IndoMonth;
 
                     return (
@@ -2643,7 +2675,7 @@ export default function TagihanWarga({
                           (b.bulan.toLowerCase() === m.toLowerCase() || b.bulan.toLowerCase() === shortM.toLowerCase())
                         );
                         if (!slot) {
-                          totalTunggakan += 130000;
+                          totalTunggakan += rateRombong;
                         }
                       });
                       return totalTunggakan;
@@ -2668,7 +2700,7 @@ export default function TagihanWarga({
                     );
 
                     const isLunas = matchedSlot ? matchedSlot.lunas : false;
-                    const nominalValue = matchedSlot ? matchedSlot.nominal : 130000;
+                    const nominalValue = matchedSlot ? matchedSlot.nominal : rateRombong;
                     const displayBulan = matchedSlot ? matchedSlot.bulan : IndoMonth;
 
                     return (
@@ -2891,7 +2923,7 @@ export default function TagihanWarga({
                               const slot = w.iuranRT.find(b => 
                                 b.bulan.toLowerCase() === m.toLowerCase() && 
                                 (b.tahun === selectedBillingYear || (!b.tahun && selectedBillingYear === 2026))
-                              ) || { bulan: m, lunas: false, nominal: 110000, tahun: selectedBillingYear };
+                              ) || { bulan: m, lunas: false, nominal: rateRT, tahun: selectedBillingYear };
 
                               return (
                                 <button
@@ -3031,7 +3063,7 @@ export default function TagihanWarga({
                               const slot = r.iuranRombong.find(b => 
                                 b.bulan.toLowerCase() === m.toLowerCase() && 
                                 (b.tahun === selectedBillingYear || (!b.tahun && selectedBillingYear === 2026))
-                              ) || { bulan: m, lunas: false, nominal: 130000, tahun: selectedBillingYear };
+                              ) || { bulan: m, lunas: false, nominal: rateRombong, tahun: selectedBillingYear };
 
                               return (
                                 <button
@@ -3217,9 +3249,13 @@ export default function TagihanWarga({
                   
                   {/* Letterhead Header */}
                   <div className="text-center border-b-4 border-double border-slate-900 pb-4 mb-6">
-                    <h2 className="text-xl md:text-2xl font-black tracking-tight text-slate-900">RUKUN TETANGGA (RT) 008 RUKUN WARGA (RW) 004</h2>
-                    <h3 className="text-sm md:text-base font-extrabold text-slate-805 mt-0.5">PERUMAHAN TAS III (PERUMTAS 3) BLOK G &amp; H</h3>
-                    <p className="text-xs text-slate-500 font-medium mt-1">Jabaran, Krian, Sidoarjo, Jawa Timur, Indonesia — Kode Pos 61262</p>
+                    <h2 className="text-lg md:text-xl font-black font-sans tracking-wide text-slate-900 uppercase leading-tight">{rtTitle}</h2>
+                    <h3 className="text-xs md:text-sm font-extrabold font-sans text-slate-800 tracking-wide uppercase leading-tight mt-1">{rtAddress}</h3>
+                    {rtEmail && (
+                      <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-1 font-sans">
+                        Email: {rtEmail}
+                      </p>
+                    )}
                   </div>
 
                   <div className="text-center mb-6">
@@ -3277,11 +3313,11 @@ export default function TagihanWarga({
                                          slot.bulan.toLowerCase() === shortM.toLowerCase())
                               );
                               const isLunas = matchedSlot ? matchedSlot.lunas : false;
-                              const nominal = matchedSlot ? matchedSlot.nominal : 110000;
+                              const nominal = matchedSlot ? matchedSlot.nominal : rateRT;
                               if (isLunas) {
                                 paidSum += nominal;
                               } else {
-                                unpaidSum += 110000;
+                                unpaidSum += rateRT;
                               }
                               return isLunas;
                             });
@@ -3321,11 +3357,11 @@ export default function TagihanWarga({
                                          slot.bulan.toLowerCase() === shortM.toLowerCase())
                               );
                               const isLunas = matchedSlot ? matchedSlot.lunas : false;
-                              const nominal = matchedSlot ? matchedSlot.nominal : 110000;
+                              const nominal = matchedSlot ? matchedSlot.nominal : rateRombong;
                               if (isLunas) {
                                 paidSum += nominal;
                               } else {
-                                unpaidSum += 110000;
+                                unpaidSum += rateRombong;
                               }
                               return isLunas;
                             });
@@ -3598,182 +3634,307 @@ export default function TagihanWarga({
               </div>
             </div>
 
-            {/* Split layout: Blok & Tahun */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-100 max-h-[70vh] overflow-y-auto pr-1">
-              
-              {/* Left Column: Blocks management */}
-              <div className="space-y-4 pb-4 md:pb-0">
-                <h4 className="text-xs font-black text-sky-700 uppercase tracking-wider">1. Wilayah Blok Rumah</h4>
+            {/* Scrollable Container covering sections 1, 2, 3, 4, 5 */}
+            <div className="max-h-[65vh] overflow-y-auto pr-2 space-y-6">
+
+              {/* Split layout: Blok & Tahun */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                 
-                {/* List of current blocks */}
-                <div className="space-y-2.5 font-mono">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Daftar Blok Tersimpan</label>
-                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
-                    {blocksList.map(b => (
-                      <div key={b} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-800 shadow-3xs">
-                        <span>Blok {b}</span>
-                        <button
-                          onClick={() => {
-                            const inUse = wargaList.some(w => w.blok === b);
-                            if (inUse) {
-                              alert(`Blok ${b} tidak bisa dihapus karena masih digunakan oleh warga!`);
-                              return;
-                            }
-                            if (confirm(`Apakah Anda yakin ingin menghapus Blok ${b}?`)) {
-                              if (updateBlocksList) {
-                                updateBlocksList(blocksList.filter(item => item !== b));
-                              }
-                            }
-                          }}
-                          className="text-slate-400 hover:text-rose-600 p-0.5 rounded cursor-pointer transition ml-0.5"
-                          title={`Hapus Blok ${b}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Input Form box to add new block */}
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const trimmed = newBlockInput.trim().toUpperCase();
-                    if (!trimmed) return;
-                    
-                    if (blocksList.includes(trimmed)) {
-                      alert(`Blok "${trimmed}" sudah ada!`);
-                      return;
-                    }
-
-                    if (updateBlocksList) {
-                      updateBlocksList([...blocksList, trimmed]);
-                      setNewBlockInput('');
-                    }
-                  }}
-                  className="space-y-2"
-                >
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1 font-sans">Sandi/Huruf Blok Baru</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        required
-                        value={newBlockInput}
-                        onChange={(e) => setNewBlockInput(e.target.value)}
-                        placeholder="Contoh: B2, D1, E3"
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-950 focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold uppercase font-sans"
-                      />
-                      <button
-                        type="submit"
-                        className="bg-sky-600 hover:bg-sky-700 text-white font-extrabold px-3 py-2 rounded-xl text-xs transition cursor-pointer shrink-0"
-                      >
-                        + Tambah Blok
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-
-              {/* Right Column: Years management */}
-              <div className="space-y-4 pt-4 md:pt-0 md:pl-6">
-                <h4 className="text-xs font-black text-emerald-700 uppercase tracking-wider">2. Tahun Buku / Anggaran</h4>
-                
-                {/* List of current years */}
-                <div className="space-y-2.5 font-mono">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Daftar Tahun Aktif</label>
-                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
-                    {yearsList.map(yr => {
-                      // Check if year is in use (warga bills, rombong bills, ledger entries)
-                      const hasWargaMatch = wargaList.some(w => w.iuranRT.some(b => b.tahun === yr));
-                      const hasRombongMatch = rombongList.some(r => r.iuranRombong.some(b => b.tahun === yr));
-                      const hasLedgerMatch = ledger.some(l => {
-                        const dateYear = l.tanggal ? Number(l.tanggal.split('-')[0]) : 0;
-                        return dateYear === yr || l.deskripsi?.includes(String(yr));
-                      });
-                      const inUse = hasWargaMatch || hasRombongMatch || hasLedgerMatch;
-                      const isLastYear = yearsList.length <= 1;
-                      const deletable = !inUse && !isLastYear;
-
-                      return (
-                        <div key={yr} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-800 shadow-3xs">
-                          <span>Tahun {yr}</span>
+                {/* Left Column: Blocks management */}
+                <div className="space-y-4 pb-4 md:pb-0">
+                  <h4 className="text-xs font-black text-sky-700 uppercase tracking-wider">1. Wilayah Blok Rumah</h4>
+                  
+                  {/* List of current blocks */}
+                  <div className="space-y-2.5 font-mono">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Daftar Blok Tersimpan</label>
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
+                      {blocksList.map(b => (
+                        <div key={b} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-800 shadow-3xs">
+                          <span>Blok {b}</span>
                           <button
-                            type="button"
                             onClick={() => {
-                              if (!deletable) {
-                                alert(`Tahun ${yr} tidak dapat dihapus karena masih digunakan dalam catatan keuangan / tagihan, atau ini merupakan satu-satunya tahun yang tersisa.`);
+                              const inUse = wargaList.some(w => w.blok === b);
+                              if (inUse) {
+                                alert(`Blok ${b} tidak bisa dihapus karena masih digunakan oleh warga!`);
                                 return;
                               }
-                              if (confirm(`Apakah Anda yakin ingin menghapus Tahun Anggaran ${yr}?`)) {
-                                if (updateYearsList) {
-                                  updateYearsList(yearsList.filter(item => item !== yr));
-                                  // fallback selected billing year if deleted is currently selected
-                                  if (selectedBillingYear === yr) {
-                                    const nextAvail = yearsList.find(item => item !== yr);
-                                    if (nextAvail) setSelectedBillingYear(nextAvail);
-                                  }
+                              if (confirm(`Apakah Anda yakin ingin menghapus Blok ${b}?`)) {
+                                if (updateBlocksList) {
+                                  updateBlocksList(blocksList.filter(item => item !== b));
                                 }
                               }
                             }}
-                            className={`p-0.5 rounded transition ml-0.5 cursor-pointer ${deletable ? 'text-slate-400 hover:text-rose-600' : 'text-slate-200 hover:text-slate-300'}`}
-                            title={deletable ? `Hapus Tahun ${yr}` : 'Tahun sedang digunakan & terkunci dari penghapusan'}
+                            className="text-slate-400 hover:text-rose-600 p-0.5 rounded cursor-pointer transition ml-0.5"
+                            title={`Hapus Blok ${b}`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Input Form box to add new year */}
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const value = parseInt(newYearInput.trim());
-                    if (isNaN(value) || value < 2000 || value > 2100) {
-                      alert('Mohon masukkan tahun masehi yang valid (contoh: 2028, 2029)!');
-                      return;
-                    }
-                    
-                    if (yearsList.includes(value)) {
-                      alert(`Tahun "${value}" sudah tercapai atau didaftarkan!`);
-                      return;
-                    }
-
-                    if (updateYearsList) {
-                      const updated = [...yearsList, value].sort((a, b) => a - b);
-                      updateYearsList(updated);
-                      setNewYearInput('');
-                    }
-                  }}
-                  className="space-y-2"
-                >
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1 font-sans">Masukan Tahun Masehi Baru</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min="2000"
-                        max="2100"
-                        required
-                        value={newYearInput}
-                        onChange={(e) => setNewYearInput(e.target.value)}
-                        placeholder="Contoh: 2028"
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold font-mono"
-                      />
-                      <button
-                        type="submit"
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-2 rounded-xl text-xs transition cursor-pointer shrink-0"
-                      >
-                        + Tambah Tahun
-                      </button>
+                      ))}
                     </div>
                   </div>
-                </form>
+
+                  {/* Input Form box to add new block */}
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const trimmed = newBlockInput.trim().toUpperCase();
+                      if (!trimmed) return;
+                      
+                      if (blocksList.includes(trimmed)) {
+                        alert(`Blok "${trimmed}" sudah ada!`);
+                        return;
+                      }
+
+                      if (updateBlocksList) {
+                        updateBlocksList([...blocksList, trimmed]);
+                        setNewBlockInput('');
+                      }
+                    }}
+                    className="space-y-2"
+                  >
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 font-sans">Sandi/Huruf Blok Baru</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          required
+                          value={newBlockInput}
+                          onChange={(e) => setNewBlockInput(e.target.value)}
+                          placeholder="Contoh: B2, D1, E3"
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-950 focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold uppercase font-sans"
+                        />
+                        <button
+                          type="submit"
+                          className="bg-sky-600 hover:bg-sky-700 text-white font-extrabold px-3 py-2 rounded-xl text-xs transition cursor-pointer shrink-0"
+                        >
+                          + Tambah Blok
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Right Column: Years management */}
+                <div className="space-y-4 pt-4 md:pt-0 md:pl-6">
+                  <h4 className="text-xs font-black text-emerald-700 uppercase tracking-wider">2. Tahun Buku / Anggaran</h4>
+                  
+                  {/* List of current years */}
+                  <div className="space-y-2.5 font-mono">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Daftar Tahun Aktif</label>
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
+                      {yearsList.map(yr => {
+                        // Check if year is in use (warga bills, rombong bills, ledger entries)
+                        const hasWargaMatch = wargaList.some(w => w.iuranRT.some(b => b.tahun === yr));
+                        const hasRombongMatch = rombongList.some(r => r.iuranRombong.some(b => b.tahun === yr));
+                        const hasLedgerMatch = ledger.some(l => {
+                          const dateYear = l.tanggal ? Number(l.tanggal.split('-')[0]) : 0;
+                          return dateYear === yr || l.deskripsi?.includes(String(yr));
+                        });
+                        const inUse = hasWargaMatch || hasRombongMatch || hasLedgerMatch;
+                        const isLastYear = yearsList.length <= 1;
+                        const deletable = !inUse && !isLastYear;
+
+                        return (
+                          <div key={yr} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-800 shadow-3xs">
+                            <span>Tahun {yr}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!deletable) {
+                                  alert(`Tahun ${yr} tidak dapat dihapus karena masih digunakan dalam catatan keuangan / tagihan, atau ini merupakan satu-satunya tahun yang tersisa.`);
+                                  return;
+                                }
+                                if (confirm(`Apakah Anda yakin ingin menghapus Tahun Anggaran ${yr}?`)) {
+                                  if (updateYearsList) {
+                                    updateYearsList(yearsList.filter(item => item !== yr));
+                                    // fallback selected billing year if deleted is currently selected
+                                    if (selectedBillingYear === yr) {
+                                      const nextAvail = yearsList.find(item => item !== yr);
+                                      if (nextAvail) setSelectedBillingYear(nextAvail);
+                                    }
+                                  }
+                                }
+                              }}
+                              className={`p-0.5 rounded transition ml-0.5 cursor-pointer ${deletable ? 'text-slate-400 hover:text-rose-600' : 'text-slate-200 hover:text-slate-300'}`}
+                              title={deletable ? `Hapus Tahun ${yr}` : 'Tahun sedang digunakan & terkunci dari penghapusan'}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Input Form box to add new year */}
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const value = parseInt(newYearInput.trim());
+                      if (isNaN(value) || value < 2000 || value > 2100) {
+                        alert('Mohon masukkan tahun masehi yang valid (contoh: 2028, 2029)!');
+                        return;
+                      }
+                      
+                      if (yearsList.includes(value)) {
+                        alert(`Tahun "${value}" sudah tercapai atau didaftarkan!`);
+                        return;
+                      }
+
+                      if (updateYearsList) {
+                        const updated = [...yearsList, value].sort((a, b) => a - b);
+                        updateYearsList(updated);
+                        setNewYearInput('');
+                      }
+                    }}
+                    className="space-y-2"
+                  >
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 font-sans">Masukan Tahun Masehi Baru</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="2000"
+                          max="2100"
+                          required
+                          value={newYearInput}
+                          onChange={(e) => setNewYearInput(e.target.value)}
+                          placeholder="Contoh: 2028"
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold font-mono"
+                        />
+                        <button
+                          type="submit"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-2 rounded-xl text-xs transition cursor-pointer shrink-0"
+                        >
+                          + Tambah Tahun
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+
               </div>
+
+              {/* Section 3: Besaran Acuan Iuran RT & Rombong */}
+              <div className="border-t border-slate-150 pt-5">
+                <h4 className="text-xs font-black text-sky-700 uppercase tracking-wider mb-3">3. Besaran Acuan Iuran Bulanan</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1.5">Acuan Iuran RT (Sistem Standard) (Rp)</label>
+                    <input
+                      type="number"
+                      disabled={currentUser?.role !== 'admin'}
+                      value={rateRT}
+                      onChange={(e) => {
+                        const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                        updateRateRT(val);
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:text-slate-400 font-bold"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Diterapkan secara otomatis saat mendaftarkan warga baru / menghitung tunggakan RT.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1.5">Acuan Iuran Rombong (Sewa Lahan) (Rp)</label>
+                    <input
+                      type="number"
+                      disabled={currentUser?.role !== 'admin'}
+                      value={rateRombong}
+                      onChange={(e) => {
+                        const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                        updateRateRombong(val);
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:text-slate-400 font-bold"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Diterapkan secara otomatis saat mendaftarkan rombong baru / menghitung sewa rombong.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Identitas KOP Surat & Buku Penagihan */}
+              <div className="border-t border-slate-150 pt-5">
+                <h4 className="text-xs font-black text-sky-700 uppercase tracking-wider mb-3">4. Identitas KOP Surat &amp; Buku Penagihan</h4>
+                
+                <div className="space-y-3.5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1.5 font-sans">Judul KOP Utama (Nama Rukun Tetangga / Kas)</label>
+                    <input
+                      type="text"
+                      disabled={currentUser?.role !== 'admin'}
+                      value={rtTitle}
+                      onChange={(e) => updateRtTitle(e.target.value)}
+                      placeholder="Contoh: PENGURUS RUKUN TETANGGA 008 RUKUN WARGA 004"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:text-slate-400 focus:bg-white transition"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Muncul sebagai tajuk paling utama (baris ke-1) di lembaran KOP laporan cetak.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 font-sans">Alamat Lengkap RT (KOP)</label>
+                      <textarea
+                        rows={2}
+                        disabled={currentUser?.role !== 'admin'}
+                        value={rtAddress}
+                        onChange={(e) => updateRtAddress(e.target.value)}
+                        placeholder="Contoh: PERUMTAS 3 RT.008 RW.004 DESA POPOH KEC WONOAYU KABUPATEN SIDOARJO 61261"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:text-slate-400 focus:bg-white transition resize-none leading-relaxed"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Muncul sebagai alamat fisik (baris ke-2) di lembaran KOP laporan cetak.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 font-sans">Alamat Email Resmi RT (KOP)</label>
+                      <input
+                        type="text"
+                        disabled={currentUser?.role !== 'admin'}
+                        value={rtEmail}
+                        onChange={(e) => updateRtEmail(e.target.value)}
+                        placeholder="Contoh: tas3.rt.08@gmail.com"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-bold font-mono focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:text-slate-400 focus:bg-white transition"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Muncul sebagai sarana kontak surat resmi (baris ke-3) di lembaran KOP laporan cetak.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 5: Pusat Pengosongan Data Keuangan (Admin Only) */}
+              {isLoggedIn && currentUser?.role === 'admin' && (
+                <div className="border-t border-rose-100 pt-5 bg-rose-50/40 p-4 rounded-2xl border border-rose-105">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-rose-700 font-black text-xs uppercase tracking-wider">
+                        <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>5. Tindakan Berbahaya &amp; Reset Data</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed max-w-md font-medium">
+                        Menghapus seluruh mutasi kas, iuran warga, iuran rombong, dan mengosongkan pembukuan kembali ke awal default.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBlockManageModal(false);
+                        onTriggerReset();
+                      }}
+                      className="bg-white hover:bg-rose-50 border border-rose-200 hover:border-rose-300 text-rose-600 font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm hover:shadow transition active:scale-95 duration-150 shrink-0 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Kosongkan Seluruh Data</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {currentUser?.role !== 'admin' && (
+                <div className="border-t border-slate-150 pt-4 font-semibold text-[11px] text-rose-600 bg-rose-50/50 p-3 rounded-xl border border-rose-100 flex items-start gap-2">
+                  <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                  <span>Hak Akses Terbatas: Pengaturan iuran acuan, perubahan naskah KOP surat (Judul, Alamat, Email), serta Pengosongan sistem data hanya diperbolehkan untuk pengguna dengan peran Admin (Ketua RT).</span>
+                </div>
+              )}
 
             </div>
 
@@ -3784,9 +3945,9 @@ export default function TagihanWarga({
                   setNewBlockInput('');
                   setNewYearInput('');
                 }}
-                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition duration-150"
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-705 font-bold rounded-xl text-xs cursor-pointer transition duration-150 active:scale-95"
               >
-                Selesai
+                Selesai / Simpan
               </button>
             </div>
           </div>

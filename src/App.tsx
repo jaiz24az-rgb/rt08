@@ -42,9 +42,31 @@ export default function App() {
     const saved = localStorage.getItem('perumtas_rt08_years');
     return saved ? JSON.parse(saved) : [2024, 2025, 2026, 2027, 2028];
   });
+  const [rateRT, setRateRT] = useState<number>(() => {
+    const saved = localStorage.getItem('perumtas_rt08_rate_rt');
+    return saved ? parseInt(saved, 10) : 35000;
+  });
+  const [rateRombong, setRateRombong] = useState<number>(() => {
+    const saved = localStorage.getItem('perumtas_rt08_rate_rombong');
+    return saved ? parseInt(saved, 10) : 50000;
+  });
+  const [rtTitle, setRtTitle] = useState<string>(() => {
+    const saved = localStorage.getItem('perumtas_rt08_title');
+    return saved || 'PENGURUS RUKUN TETANGGA 008 RUKUN WARGA 004';
+  });
+  const [rtAddress, setRtAddress] = useState<string>(() => {
+    const saved = localStorage.getItem('perumtas_rt08_address');
+    return saved || 'PERUMTAS 3 RT.008 RW.004 DESA POPOH KEC WONOAYU KABUPATEN SIDOARJO 61261';
+  });
+  const [rtEmail, setRtEmail] = useState<string>(() => {
+    const saved = localStorage.getItem('perumtas_rt08_email');
+    return saved || 'tas3.rt.08@gmail.com';
+  });
   const [showUserManagement, setShowUserManagement] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
+  const [resetConfirmInput, setResetConfirmInput] = useState<string>('');
 
   useEffect(() => {
     const handleFocusIn = (e: Event) => {
@@ -176,12 +198,53 @@ export default function App() {
   }, [yearsList]);
 
   useEffect(() => {
+    localStorage.setItem('perumtas_rt08_rate_rt', rateRT.toString());
+  }, [rateRT]);
+
+  useEffect(() => {
+    localStorage.setItem('perumtas_rt08_rate_rombong', rateRombong.toString());
+  }, [rateRombong]);
+
+  useEffect(() => {
+    localStorage.setItem('perumtas_rt08_title', rtTitle);
+  }, [rtTitle]);
+
+  useEffect(() => {
+    localStorage.setItem('perumtas_rt08_address', rtAddress);
+  }, [rtAddress]);
+
+  useEffect(() => {
+    localStorage.setItem('perumtas_rt08_email', rtEmail);
+  }, [rtEmail]);
+
+  useEffect(() => {
     if (currentUser) {
       localStorage.setItem('perumtas_rt08_current_user', JSON.stringify(currentUser));
     } else {
       localStorage.removeItem('perumtas_rt08_current_user');
     }
   }, [currentUser]);
+
+  // Force automatic first-time load reset to ensure older browser cache is cleared with empty initial values
+  useEffect(() => {
+    const isCleaned = localStorage.getItem('perumtas_rt08_empty_init_v5');
+    if (!isCleaned) {
+      localStorage.setItem('perumtas_rt08_empty_init_v5', 'true');
+      localStorage.removeItem('perumtas_rt08_kas');
+      localStorage.removeItem('perumtas_rt08_ledger');
+      localStorage.removeItem('perumtas_rt08_warga');
+      localStorage.removeItem('perumtas_rt08_rombong');
+      localStorage.removeItem('perumtas_rt08_rate_rt');
+      localStorage.removeItem('perumtas_rt08_rate_rombong');
+      
+      setKas(INITIAL_BALANCES);
+      setLedger(INITIAL_LEDGER);
+      setWargaList(INITIAL_WARGA);
+      setRombongList(INITIAL_ROMBONG);
+      setRateRT(35000);
+      setRateRombong(50000);
+    }
+  }, []);
 
   // Handle adding custom transactions
   const addLedgerEntry = (entry: Omit<LedgerEntry, 'id'>) => {
@@ -192,17 +255,13 @@ export default function App() {
     setLedger(prev => [newEntry, ...prev]);
   };
 
-  // Reset Application Data Helper
+  // Reset Application Data Helper (Admin ONLY)
   const handleResetData = () => {
-    if (confirm('Apakah Anda yakin ingin menyetel ulang data aplikasi kembali ke bawaan awal? Semua iuran dan transaksi tambahan akan terhapus.')) {
-      setKas(INITIAL_BALANCES);
-      setLedger(INITIAL_LEDGER);
-      setWargaList(INITIAL_WARGA);
-      setRombongList(INITIAL_ROMBONG);
-      setBlocksList(['A4', 'A3', 'C5', 'C3']);
-      setActiveTab('dashboard');
-      alert('Data sistem kas berhasil disetel ulang ke kondisi awal.');
+    if (!currentUser || currentUser.role !== 'admin') {
+      alert('Akses Ditolak: Hanya pengguna dengan peran Admin (Ketua RT) yang diberikan hak akses untuk mengosongkan pembukuan & data.');
+      return;
     }
+    setShowResetConfirmModal(true);
   };
 
   return (
@@ -236,17 +295,7 @@ export default function App() {
               <span>Jumat, 22 Mei 2026</span>
             </div>
 
-            {/* Quick Reset State Button */}
-            {isLoggedIn && (
-              <button
-                onClick={handleResetData}
-                className="hidden md:flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer"
-                title="Reset Aplikasi ke Bawaan"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Demo</span>
-              </button>
-            )}
+
 
             {/* Admin Login Indicator Button */}
             {isLoggedIn ? (
@@ -274,7 +323,7 @@ export default function App() {
       <main className="max-w-6xl mx-auto px-4 py-6 w-full flex-1">
         
         {/* Admin Operational Alert Panel */}
-        {isLoggedIn && (
+        {isLoggedIn && activeTab === 'dashboard' && (
           <div className="mb-6 bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-sky-100 text-sky-750 rounded-xl">
@@ -307,15 +356,6 @@ export default function App() {
                   <span>Kelola Pengurus RT</span>
                 </button>
               )}
-              
-              <button
-                onClick={handleResetData}
-                className="flex items-center gap-1 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-700 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition"
-                title="Reset seluruh database demonstrasi"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset Demo</span>
-              </button>
             </div>
           </div>
         )}
@@ -349,6 +389,17 @@ export default function App() {
               updateBlocksList={setBlocksList}
               yearsList={yearsList}
               updateYearsList={setYearsList}
+              rateRT={rateRT}
+              updateRateRT={setRateRT}
+              rateRombong={rateRombong}
+              updateRateRombong={setRateRombong}
+              onTriggerReset={handleResetData}
+              rtTitle={rtTitle}
+              updateRtTitle={setRtTitle}
+              rtAddress={rtAddress}
+              updateRtAddress={setRtAddress}
+              rtEmail={rtEmail}
+              updateRtEmail={setRtEmail}
             />
           )}
 
@@ -362,6 +413,9 @@ export default function App() {
               currentUser={currentUser}
               usersList={usersList}
               yearsList={yearsList}
+              rtTitle={rtTitle}
+              rtAddress={rtAddress}
+              rtEmail={rtEmail}
             />
           )}
         </div>
@@ -441,6 +495,97 @@ export default function App() {
         onUpdateUsers={setUsersList}
         currentUser={currentUser}
       />
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirmModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border border-rose-200 rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 text-slate-800 max-w-md w-full">
+            <div className="flex items-center gap-3 border-b border-rose-100 pb-3 mb-4">
+              <div className="p-2.5 bg-rose-50 text-rose-600 rounded-2xl animate-pulse">
+                <ShieldAlert className="w-6 h-6 animate-pulse text-rose-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base">Konfirmasi Pengosongan Data</h3>
+                <p className="text-[11px] text-slate-400 font-semibold font-mono tracking-wide uppercase">Peringatan Kritis Keamanan</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                Tindakan ini akan <strong className="text-rose-600">menghapus seluruh data secara permanen</strong> termasuk:
+              </p>
+              <ul className="text-xs text-slate-500 space-y-1 bg-slate-50 p-3 rounded-2xl border border-slate-150 font-medium">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                  <span>Seluruh mutasi mutasi masuk/keluar buku kas RT</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                  <span>Seluruh riwayat pembayaran & tagihan warga</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                  <span>Seluruh riwayat iuran & sewa rombong pedagang</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                  <span>Pengaturan Blok Rumah & parameter tarif iuran default</span>
+                </li>
+              </ul>
+
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                  Untuk meminimalkan kesalahan, silakan ketik kata <strong className="text-rose-650 font-extrabold bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded font-mono">HAPUS</strong> di bawah ini:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ketik HAPUS untuk konfirmasi"
+                  value={resetConfirmInput}
+                  onChange={(e) => setResetConfirmInput(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-extrabold font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 justify-end mt-6 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetConfirmModal(false);
+                  setResetConfirmInput('');
+                }}
+                className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-650 hover:text-slate-805 font-bold rounded-xl text-xs cursor-pointer transition active:scale-95 flex-1"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={resetConfirmInput.trim().toUpperCase() !== 'HAPUS'}
+                onClick={() => {
+                  if (resetConfirmInput.trim().toUpperCase() === 'HAPUS') {
+                    // Execute reset
+                    setKas(INITIAL_BALANCES);
+                    setLedger(INITIAL_LEDGER);
+                    setWargaList(INITIAL_WARGA);
+                    setRombongList(INITIAL_ROMBONG);
+                    setBlocksList(['A4', 'A3', 'C5', 'C3']);
+                    setRateRT(35000);
+                    setRateRombong(50000);
+                    setActiveTab('dashboard');
+                    setShowResetConfirmModal(false);
+                    setResetConfirmInput('');
+                    alert('Seluruh data pembukuan, warga, dan rombong berhasil dikosongkan.');
+                  }
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-750 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-250 text-white font-extrabold rounded-xl text-xs cursor-pointer transition flex-1 active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Kosongkan Seluruh Data</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

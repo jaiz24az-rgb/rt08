@@ -50,7 +50,7 @@ export default function Dashboard({ kas, updateKas, ledger, addLedgerEntry, isLo
   });
 
   // Specialized transaction helper states
-  const [tagihanType, setTagihanType] = useState<'iuran_masuk' | 'setor_bank'>('iuran_masuk');
+  const [tagihanType, setTagihanType] = useState<'setor_bank'>('setor_bank');
   const [bankType, setBankType] = useState<'bank_ke_petty' | 'petty_ke_bank'>('bank_ke_petty');
   const [transferAmount, setTransferAmount] = useState('');
   const [transferDesc, setTransferDesc] = useState('');
@@ -139,82 +139,52 @@ export default function Dashboard({ kas, updateKas, ledger, addLedgerEntry, isLo
       setShowQuickTx(false);
 
     } else if (activeTab === 'tagihan') {
-      if (tagihanType === 'iuran_masuk') {
-        const parsedAmount = parseFloat(newTx.jumlah);
-        if (!newTx.deskripsi || isNaN(parsedAmount) || parsedAmount <= 0) return;
+      // setor_bank (Pemindahbukuan Hasil Tagihan -> Bank)
+      const parsedAmount = parseFloat(transferAmount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) return;
 
-        addLedgerEntry({
-          tanggal: today,
-          deskripsi: `${newTx.deskripsi} (Penerimaan Tagihan)`,
-          jumlah: parsedAmount,
-          tipe: 'pemasukan',
-          sumberKas: newTx.sumberKas,
-          kategori: newTx.sumberKas.startsWith('rombong') ? 'Iuran Rombong' : 'Iuran Bulanan',
-          petugas: newTx.petugas || 'Penerima Tagihan'
-        });
+      const sourceKas: keyof Balance = sectorSetor === 'rt' ? 'rtTunai' : 'rombongTunai';
+      const targetKas: keyof Balance = sectorSetor === 'rt' ? 'rtBank' : 'rombongBank';
 
-        const updatedBalance = { ...kas };
-        updatedBalance[newTx.sumberKas] += parsedAmount;
-        updateKas(updatedBalance);
-
-        // Reset
-        setNewTx({
-          deskripsi: '',
-          jumlah: '',
-          tipe: 'pemasukan',
-          sumberKas: 'rtTunai',
-          kategori: 'Iuran Bulanan',
-          petugas: ''
-        });
-        setShowQuickTx(false);
-
-      } else { // setor_bank (Pemindahbukuan Hasil Tagihan -> Bank)
-        const parsedAmount = parseFloat(transferAmount);
-        if (isNaN(parsedAmount) || parsedAmount <= 0) return;
-
-        const sourceKas: keyof Balance = sectorSetor === 'rt' ? 'rtTunai' : 'rombongTunai';
-        const targetKas: keyof Balance = sectorSetor === 'rt' ? 'rtBank' : 'rombongBank';
-
-        if (kas[sourceKas] < parsedAmount) {
-          alert(`Peringatan: Saldo ${kasLabels[sourceKas].label} (Rp ${kas[sourceKas].toLocaleString('id-ID')}) tidak mencukupi untuk disetorkan ke bank sebesar Rp ${parsedAmount.toLocaleString('id-ID')}!`);
-          return;
-        }
-
-        const customDesc = transferDesc || `Setor Bank: Pemindahbukuan Hasil Tagihan ${sectorSetor.toUpperCase()}`;
-        
-        // 1. Outgoing from tunai
-        addLedgerEntry({
-          tanggal: today,
-          deskripsi: `${customDesc} (Debet Tunai)`,
-          jumlah: parsedAmount,
-          tipe: 'pengeluaran',
-          sumberKas: sourceKas,
-          kategori: 'Setor Bank',
-          petugas: transferPetugas || 'Bendahara RT'
-        });
-
-        // 2. Incoming to bank
-        addLedgerEntry({
-          tanggal: today,
-          deskripsi: `${customDesc} (Kredit Bank)`,
-          jumlah: parsedAmount,
-          tipe: 'pemasukan',
-          sumberKas: targetKas,
-          kategori: 'Setor Bank',
-          petugas: transferPetugas || 'Bendahara RT'
-        });
-
-        const updatedBalance = { ...kas };
-        updatedBalance[sourceKas] -= parsedAmount;
-        updatedBalance[targetKas] += parsedAmount;
-        updateKas(updatedBalance);
-
-        // Reset
-        setTransferAmount('');
-        setTransferDesc('');
-        setTransferPetugas('');
-        setShowQuickTx(false);
+      if (kas[sourceKas] < parsedAmount) {
+        alert(`Peringatan: Saldo ${kasLabels[sourceKas].label} (Rp ${kas[sourceKas].toLocaleString('id-ID')}) tidak mencukupi untuk disetorkan ke bank sebesar Rp ${parsedAmount.toLocaleString('id-ID')}!`);
+        return;
       }
+
+      const customDesc = transferDesc || `Setor Bank: Pemindahbukuan Hasil Tagihan ${sectorSetor.toUpperCase()}`;
+      
+      // 1. Outgoing from tunai
+      addLedgerEntry({
+        tanggal: today,
+        deskripsi: `${customDesc} (Debet Tunai)`,
+        jumlah: parsedAmount,
+        tipe: 'pengeluaran',
+        sumberKas: sourceKas,
+        kategori: 'Setor Bank',
+        petugas: transferPetugas || 'Bendahara RT'
+      });
+
+      // 2. Incoming to bank
+      addLedgerEntry({
+        tanggal: today,
+        deskripsi: `${customDesc} (Kredit Bank)`,
+        jumlah: parsedAmount,
+        tipe: 'pemasukan',
+        sumberKas: targetKas,
+        kategori: 'Setor Bank',
+        petugas: transferPetugas || 'Bendahara RT'
+      });
+
+      const updatedBalance = { ...kas };
+      updatedBalance[sourceKas] -= parsedAmount;
+      updatedBalance[targetKas] += parsedAmount;
+      updateKas(updatedBalance);
+
+      // Reset
+      setTransferAmount('');
+      setTransferDesc('');
+      setTransferPetugas('');
+      setShowQuickTx(false);
 
     } else if (activeTab === 'petty') {
       const parsedAmount = parseFloat(newTx.jumlah);
@@ -421,7 +391,7 @@ export default function Dashboard({ kas, updateKas, ledger, addLedgerEntry, isLo
               type="button"
               onClick={() => {
                 setActiveTab('tagihan');
-                setNewTx({ ...newTx, kategori: 'Iuran Bulanan', tipe: 'pemasukan', sumberKas: 'rtBank' });
+                setNewTx({ ...newTx, kategori: 'Setor Bank', tipe: 'pengeluaran', sumberKas: 'rtTunai' });
               }}
               className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-extrabold transition cursor-pointer ${
                 activeTab === 'tagihan'
@@ -430,7 +400,7 @@ export default function Dashboard({ kas, updateKas, ledger, addLedgerEntry, isLo
               }`}
             >
               <Receipt className="w-3.5 h-3.5" />
-              Tagihan & Setor
+              Setor hasil tagihan
             </button>
             <button
               type="button"
@@ -480,167 +450,79 @@ export default function Dashboard({ kas, updateKas, ledger, addLedgerEntry, isLo
 
           <form onSubmit={handleCreateTx} className="space-y-4">
             
-            {/* 1. TAGIHAN & SETOR BANK TAB */}
+            {/* 1. SEKTOR SETOR BANK TAB */}
             {activeTab === 'tagihan' && (
               <div className="space-y-4 animate-in fade-in duration-150">
-                {/* Subtype switch */}
-                <div className="grid grid-cols-2 gap-2 max-w-md">
-                  <button
-                    type="button"
-                    onClick={() => setTagihanType('iuran_masuk')}
-                    className={`py-2 px-3 rounded-xl text-xs font-extrabold transition cursor-pointer text-center border ${
-                      tagihanType === 'iuran_masuk'
-                        ? 'bg-sky-50 text-sky-700 border-sky-300'
-                        : 'bg-white text-slate-500 border-slate-200'
-                    }`}
-                  >
-                    📥 Penerimaan Iuran / Tagihan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTagihanType('setor_bank')}
-                    className={`py-2 px-3 rounded-xl text-xs font-extrabold transition cursor-pointer text-center border ${
-                      tagihanType === 'setor_bank'
-                        ? 'bg-sky-50 text-sky-700 border-sky-300'
-                        : 'bg-white text-slate-500 border-slate-200'
-                    }`}
-                  >
-                    🏦 Setor hasil tagihan tunai ke Bank
-                  </button>
+                <div className="bg-sky-50 text-sky-800 border border-sky-200 p-3.5 rounded-xl text-xs leading-relaxed">
+                  💡 <strong>Pemindahbukuan Setor Bank:</strong> Berfungsi memindahkan simpanan kas RT yang awalnya terkumpul secara <strong>Tunai (Tunai Fisik)</strong> ke rekening <strong>Tabungan Bank</strong>. Transaksi ini akan tercatat secara akurat di buku kas sebagai pengeluaran tunai dan pemasukan bank yang seimbang, menjaga total keseluruhan kas konstan.
                 </div>
 
-                {tagihanType === 'iuran_masuk' ? (
-                  <>
-                    <div className="bg-sky-50 text-sky-800 border border-sky-200 p-3.5 rounded-xl text-xs leading-relaxed">
-                      💡 <strong>Catatan Iuran:</strong> Iuran yang ditarik manual dari warga dapat dimasukkan di sini. Gunakan akun target yang sesuai (Direkomendasikan langsung disetorkan / tertulis pada akun <strong>Bank RT / Bank Rombong</strong> demi ketertiban kas saldo total).
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Sektor / Kas yang Disetor</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSectorSetor('rt')}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer text-center border ${
+                          sectorSetor === 'rt'
+                            ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        RT (Tunai ➔ Bank)
+                        <div className="text-[10px] opacity-75 font-mono">Sisa Tunai: Rp {kas.rtTunai.toLocaleString('id-ID')}</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSectorSetor('rombong')}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer text-center border ${
+                          sectorSetor === 'rombong'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        Rombong (Tunai ➔ Bank)
+                        <div className="text-[10px] opacity-75 font-mono">Sisa Tunai: Rp {kas.rombongTunai.toLocaleString('id-ID')}</div>
+                      </button>
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Deskripsi Penerimaan Iuran</label>
-                        <input
-                          required
-                          type="text"
-                          placeholder="e.g. Pembayaran Iuran Kebersihan - Bp Hari Laksono"
-                          value={newTx.deskripsi}
-                          onChange={e => setNewTx({ ...newTx, deskripsi: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Nominal yang Disetorkan ke Bank (Rp)</label>
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 500000"
+                      value={transferAmount}
+                      onChange={e => setTransferAmount(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
+                    />
+                  </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Nominal Setoran (Rp)</label>
-                        <input
-                          required
-                          type="number"
-                          min="1"
-                          placeholder="e.g. 110000"
-                          value={newTx.jumlah}
-                          onChange={e => setNewTx({ ...newTx, jumlah: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
-                        />
-                      </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Catatan / Deskripsi Setor Bank (Opsional)</label>
+                    <input
+                      type="text"
+                      placeholder={`Setor Bank: Penyetoran Akumulasi hasil Iuran Cash ${sectorSetor.toUpperCase()}`}
+                      value={transferDesc}
+                      onChange={e => setTransferDesc(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Akun Kas Target Penerima</label>
-                        <select
-                          value={newTx.sumberKas}
-                          onChange={e => setNewTx({ ...newTx, sumberKas: e.target.value as keyof Balance })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        >
-                          <option value="rtBank">[RT] RT Bank (Rekomendasi Setor Bank)</option>
-                          <option value="rtTunai">[RT] RT Tunai (Penerimaan Tunai Hand-to-Hand)</option>
-                          <option value="rombongBank">[Rombong] Rombong Bank (Kuliner RT 08)</option>
-                          <option value="rombongTunai">[Rombong] Rombong Tunai (Kas Laci Tunai)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Petugas Penerima (Administrator)</label>
-                        <input
-                          type="text"
-                          placeholder="Nama Pengurus Pemegang Tagihan"
-                          value={newTx.petugas}
-                          onChange={e => setNewTx({ ...newTx, petugas: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="bg-sky-50 text-sky-800 border border-sky-200 p-3.5 rounded-xl text-xs leading-relaxed">
-                      💡 <strong>Pemindahbukuan Setor Bank:</strong> Berfungsi memindahkan simpanan kas RT yang awalnya terkumpul secara <strong>Tunai (Tunai Fisik)</strong> ke rekening <strong>Tabungan Bank</strong>. Transaksi ini akan tercatat secara akurat di buku kas sebagai pengeluaran tunai dan pemasukan bank yang seimbang, menjaga total keseluruhan kas konstan.
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Sektor / Kas yang Disetor</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSectorSetor('rt')}
-                            className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer text-center border ${
-                              sectorSetor === 'rt'
-                                ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            RT (Tunai ➔ Bank)
-                            <div className="text-[10px] opacity-75 font-mono">Sisa Tunai: Rp {kas.rtTunai.toLocaleString('id-ID')}</div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSectorSetor('rombong')}
-                            className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer text-center border ${
-                              sectorSetor === 'rombong'
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            Rombong (Tunai ➔ Bank)
-                            <div className="text-[10px] opacity-75 font-mono">Sisa Tunai: Rp {kas.rombongTunai.toLocaleString('id-ID')}</div>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Nominal yang Disetorkan ke Bank (Rp)</label>
-                        <input
-                          required
-                          type="number"
-                          min="1"
-                          placeholder="e.g. 500000"
-                          value={transferAmount}
-                          onChange={e => setTransferAmount(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Catatan / Deskripsi Setor Bank (Opsional)</label>
-                        <input
-                          type="text"
-                          placeholder={`Setor Bank: Penyetoran Akumulasi hasil Iuran Cash ${sectorSetor.toUpperCase()}`}
-                          value={transferDesc}
-                          onChange={e => setTransferDesc(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Nama Petugas Penyetor / Bendahara</label>
-                        <input
-                          type="text"
-                          placeholder="Nama Pengurus Pemindah Kas"
-                          value={transferPetugas}
-                          onChange={e => setTransferPetugas(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-650 mb-1.5 font-mono">Nama Petugas Penyetor / Bendahara</label>
+                    <input
+                      type="text"
+                      placeholder="Nama Pengurus Pemindah Kas"
+                      value={transferPetugas}
+                      onChange={e => setTransferPetugas(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
